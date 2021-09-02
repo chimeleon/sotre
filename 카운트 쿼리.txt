@@ -8,5 +8,12 @@ left outer join AGENTDIM a on e.AGENTID = a.AGENTID
 left outer join CATEGORYLIST c on e.CATEGORYLISTID = c.CATEGORYLISTID
 left outer join TRIGGERLIST t2 on e.TRIGGERLISTID = t2.TRIGGERLISTID 
 left outer join GROUPLIST g on e.GROUPLISTID = g.GROUPLISTID 
- where e.CHANNEL=9  AND 1=1;
- 
+ where e.CHANNEL=9  AND 1=1 AND e.dateid between '2021-08-24' and '2021-08-31';
+ SELECT 
+/*+  NO_INDEX( e ix_evidence_agent ix_evidence_categoryListId ix_evidence_channel ix_evidence_dateId ix_evidence_eventtype ix_evidence_evidencetype ix_evidence_groupListId ix_evidence_priority ix_evidence_status ix_evidence_triggerListid ix_evidence_user ix_evid_applname)  INDEX_DESC( e IX_EVIDENCE_CHANNEL_DATEID )  FIRST_ROWS(1) NO_MERGE  NO_EXPAND_TABLE(e)  */
+COUNT(e.evidenceid) 
+FROM evidence e  
+WHERE  e.dateId = e.dateId  
+   AND e.dateid BETWEEN  TO_TIMESTAMP('21/08/23 09:00:00', 'YY/MM/DD HH24:MI:SS') AND TO_TIMESTAMP('21/08/24 09:00:00', 'YY/MM/DD HH24:MI:SS') 
+   AND e.evidencestarttime BETWEEN TO_TIMESTAMP('21/08/23 09:00:00', 'YY/MM/DD HH24:MI:SS') AND TO_TIMESTAMP('21/08/24 09:00:00', 'YY/MM/DD HH24:MI:SS')  
+AND e.channel = 9 
