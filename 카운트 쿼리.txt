@@ -1,0 +1,12 @@
+
+ select /*+ INDEX_DESC( e IX_EVIDENCE_EVDTYPE_DATEID ) FIRST_ROWS(1) NO_MERGE NO_EXPAND_TABLE(e) */
+ count(*)
+from EVIDENCE e
+left outer join TARGETUSER t on e.USERID = t.USERID 
+left outer join EVENTTYPE e2 on e.ACTIVITY = e2.EVENTCODE 
+left outer join AGENTDIM a on e.AGENTID = a.AGENTID 
+left outer join CATEGORYLIST c on e.CATEGORYLISTID = c.CATEGORYLISTID
+left outer join TRIGGERLIST t2 on e.TRIGGERLISTID = t2.TRIGGERLISTID 
+left outer join GROUPLIST g on e.GROUPLISTID = g.GROUPLISTID 
+ where e.CHANNEL=9  AND 1=1;
+ 
