@@ -1,0 +1,218 @@
+#1 시간 컬럼 관련
+  1) 타임 컬럼에 KST로 변경 요청 (+9)
+     아래와 같이 표시됨 (날짜뒤 T 제외, KST로 변경, HH:MM:SS 까지만 표시 (FF 삭제..)
+      Time: 2021-09-03T00:59:54.917Z
+      AgentTime: 2021-09-03T01:00:01.660Z
+
+#2 페이지 로딩 최근일부터 조회/로딩될 수 있도록 수정
+   9월 7일 페이지 접속 시 첫 페이지 로딩 시 아래와 같은 순서로 표시됨
+   
+      2021-09-03T00:59:54.917Z	2021-09-03T01:00:01.660Z
+      2021-09-03T01:03:26.902Z	2021-09-03T01:03:26.575Z
+      2021-09-03T01:03:30.058Z	2021-09-03T01:03:29.733Z
+
+    최신일부터 보여지도록 수정...
+
+#3 타입에 collection 선택 시 '데이터가 없습니다' 
+    
+
+2021-09-07 01:15:57.800  INFO 537688 --- [nio-8080-exec-1] c.f.k.r.OracleEvidenceJdbcRepository     : select * from (select rownum, e.CHANNEL,
+e.EVIDENCETYPE,
+e2.LABEL as Activity,
+e.EVIDENCESTARTTIME,
+e.EVIDENCEID,
+e.MATCHTEXT,
+e.APPLICATIONNAME,
+e.RESOURCES ,
+e.AGENTTIME ,
+t.LABEL AS USERNAME,
+t.SAMACCOUNTNAME AS PERSON,
+a.LABEL AS AGENTLABEL,
+e.CATEGORYLISTID ,
+e.GROUPLISTID ,
+e.TRIGGERLISTID
+from EVIDENCE e
+left outer join TARGETUSER t on e.USERID = t.USERID
+left outer join EVENTTYPE e2 on e.ACTIVITY = e2.EVENTCODE
+left outer join AGENTDIM a on e.AGENTID = a.AGENTID
+left outer join CATEGORYLIST c on e.CATEGORYLISTID = c.CATEGORYLISTID
+left outer join TRIGGERLIST t2 on e.TRIGGERLISTID = t2.TRIGGERLISTID
+left outer join GROUPLIST g on e.GROUPLISTID = g.GROUPLISTID
+ where e.CHANNEL=9 AND e.evidencetype = 1  AND e.dateid between TO_TIMESTAMP('31-AUG-2021 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('07-SEP-2021 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF') AND 1=1 AND e.EVIDENCETYPE = 2) q where rownum <= 20
+2021-09-07 01:15:57.803 DEBUG 537688 --- [nio-8080-exec-1] org.hibernate.SQL                        :
+    select
+        categoryli0_.CATEGORYLISTID as categorylistid1_4_,
+        categoryli0_.IDCOUNT as idcount2_4_,
+        categoryli0_.IDLIST as idlist3_4_,
+        categoryli0_.IDLISTOVERFLOW as idlistoverflow4_4_
+    from
+        CATEGORYLIST categoryli0_
+    where
+        categoryli0_.CATEGORYLISTID in (
+            ?
+        )
+Hibernate:
+    select
+        categoryli0_.CATEGORYLISTID as categorylistid1_4_,
+        categoryli0_.IDCOUNT as idcount2_4_,
+        categoryli0_.IDLIST as idlist3_4_,
+        categoryli0_.IDLISTOVERFLOW as idlistoverflow4_4_
+    from
+        CATEGORYLIST categoryli0_
+    where
+        categoryli0_.CATEGORYLISTID in (
+            ?
+        )
+2021-09-07 01:15:57.804 TRACE 537688 --- [nio-8080-exec-1] o.h.type.descriptor.sql.BasicBinder      : binding parameter [1] as [BIGINT] - [null]
+2021-09-07 01:15:57.805 DEBUG 537688 --- [nio-8080-exec-1] org.hibernate.SQL                        :
+    select
+        triggerlis0_.TRIGGERLISTID as triggerlistid1_10_,
+        triggerlis0_.IDCOUNT as idcount2_10_,
+        triggerlis0_.IDLIST as idlist3_10_,
+        triggerlis0_.IDLISTOVERFLOW as idlistoverflow4_10_
+    from
+        TRIGGERLIST triggerlis0_
+    where
+        triggerlis0_.TRIGGERLISTID in (
+            ?
+        )
+Hibernate:
+    select
+        triggerlis0_.TRIGGERLISTID as triggerlistid1_10_,
+        triggerlis0_.IDCOUNT as idcount2_10_,
+        triggerlis0_.IDLIST as idlist3_10_,
+        triggerlis0_.IDLISTOVERFLOW as idlistoverflow4_10_
+    from
+        TRIGGERLIST triggerlis0_
+    where
+        triggerlis0_.TRIGGERLISTID in (
+            ?
+        )
+2021-09-07 01:15:57.806 TRACE 537688 --- [nio-8080-exec-1] o.h.type.descriptor.sql.BasicBinder      : binding parameter [1] as [BIGINT] - [null]
+2021-09-07 01:15:57.807 DEBUG 537688 --- [nio-8080-exec-1] org.hibernate.SQL                        :
+    select
+        grouplist0_.GROUPLISTID as grouplistid1_7_,
+        grouplist0_.IDCOUNT as idcount2_7_,
+        grouplist0_.IDLIST as idlist3_7_,
+        grouplist0_.IDLISTOVERFLOW as idlistoverflow4_7_
+    from
+        GROUPLIST grouplist0_
+    where
+        grouplist0_.GROUPLISTID in (
+            ?
+        )
+Hibernate:
+    select
+        grouplist0_.GROUPLISTID as grouplistid1_7_,
+        grouplist0_.IDCOUNT as idcount2_7_,
+        grouplist0_.IDLIST as idlist3_7_,
+        grouplist0_.IDLISTOVERFLOW as idlistoverflow4_7_
+    from
+        GROUPLIST grouplist0_
+    where
+        grouplist0_.GROUPLISTID in (
+            ?
+        )
+2021-09-07 01:15:57.807 TRACE 537688 --- [nio-8080-exec-1] o.h.type.descriptor.sql.BasicBinder      : binding parameter [1] as [BIGINT] - [null]
+2021-09-07 01:15:57.808 DEBUG 537688 --- [nio-8080-exec-1] org.hibernate.SQL                        :
+    select
+        c60group0_.CONFIGSEQUENCE as configsequence1_1_,
+        c60group0_.GROUPID as groupid2_1_,
+        c60group0_.COLORBLUE as colorblue3_1_,
+        c60group0_.COLORGREEN as colorgreen4_1_,
+        c60group0_.COLORRED as colorred5_1_,
+        c60group0_.DESCRIPTION as description6_1_,
+        c60group0_.GUID as guid7_1_,
+        c60group0_.ISDISABLED as isdisabled8_1_,
+        c60group0_.LABEL as label9_1_,
+        c60group0_.PARENTID as parentid10_1_,
+        c60group0_.ROWADDEDDATE as rowaddeddate11_1_,
+        c60group0_.SUBSTITUTE as substitute12_1_,
+        c60group0_.TYPE as type13_1_
+    from
+        C60GROUP_H c60group0_
+    where
+        c60group0_.GROUPID in (
+            ?
+        )
+Hibernate:
+    select
+        c60group0_.CONFIGSEQUENCE as configsequence1_1_,
+        c60group0_.GROUPID as groupid2_1_,
+        c60group0_.COLORBLUE as colorblue3_1_,
+        c60group0_.COLORGREEN as colorgreen4_1_,
+        c60group0_.COLORRED as colorred5_1_,
+        c60group0_.DESCRIPTION as description6_1_,
+        c60group0_.GUID as guid7_1_,
+        c60group0_.ISDISABLED as isdisabled8_1_,
+        c60group0_.LABEL as label9_1_,
+        c60group0_.PARENTID as parentid10_1_,
+        c60group0_.ROWADDEDDATE as rowaddeddate11_1_,
+        c60group0_.SUBSTITUTE as substitute12_1_,
+        c60group0_.TYPE as type13_1_
+    from
+        C60GROUP_H c60group0_
+    where
+        c60group0_.GROUPID in (
+            ?
+        )
+2021-09-07 01:15:57.809 TRACE 537688 --- [nio-8080-exec-1] o.h.type.descriptor.sql.BasicBinder      : binding parameter [1] as [BIGINT] - [null]
+2021-09-07 01:15:57.810 DEBUG 537688 --- [nio-8080-exec-1] org.hibernate.SQL                        :
+    select
+        category0_.CATEGORYID as categoryid1_3_,
+        category0_.CONFIGSEQUENCE as configsequence2_3_,
+        category0_.CATALOGNUMBER as catalognumber3_3_,
+        category0_.DESCRIPTION as description4_3_,
+        category0_.GUID as guid5_3_,
+        category0_.LABEL as label6_3_,
+        category0_.OWNEROPERATORID as owneroperatorid7_3_,
+        category0_.SUBSTITUTE as substitute8_3_,
+        category0_.VERSION as version9_3_
+    from
+        CATEGORY_H category0_
+    where
+        category0_.CATEGORYID in (
+            ?
+        )
+Hibernate:
+    select
+        category0_.CATEGORYID as categoryid1_3_,
+        category0_.CONFIGSEQUENCE as configsequence2_3_,
+        category0_.CATALOGNUMBER as catalognumber3_3_,
+        category0_.DESCRIPTION as description4_3_,
+        category0_.GUID as guid5_3_,
+        category0_.LABEL as label6_3_,
+        category0_.OWNEROPERATORID as owneroperatorid7_3_,
+        category0_.SUBSTITUTE as substitute8_3_,
+        category0_.VERSION as version9_3_
+    from
+        CATEGORY_H category0_
+    where
+        category0_.CATEGORYID in (
+            ?
+        )
+2021-09-07 01:15:57.810 TRACE 537688 --- [nio-8080-exec-1] o.h.type.descriptor.sql.BasicBinder      : binding parameter [1] as [BIGINT] - [null]
+2021-09-07 01:15:57.812 DEBUG 537688 --- [nio-8080-exec-1] org.hibernate.SQL                        :
+    select
+        policytrig0_.CONFIGSEQUENCE as configsequence1_8_,
+        policytrig0_.TRIGGERID as triggerid2_8_,
+        policytrig0_.LABEL as label3_8_
+    from
+        POLICYTRIGGER_H policytrig0_
+    where
+        policytrig0_.TRIGGERID in (
+            ?
+        )
+Hibernate:
+    select
+        policytrig0_.CONFIGSEQUENCE as configsequence1_8_,
+        policytrig0_.TRIGGERID as triggerid2_8_,
+        policytrig0_.LABEL as label3_8_
+    from
+        POLICYTRIGGER_H policytrig0_
+    where
+        policytrig0_.TRIGGERID in (
+            ?
+        )
+2021-09-07 01:15:57.812 TRACE 537688 --- [nio-8080-exec-1] o.h.type.descriptor.sql.BasicBinder      : binding parameter [1] as [BIGINT] - [null]
+
