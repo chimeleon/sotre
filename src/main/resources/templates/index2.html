@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        table { border-collapse: collapse }
+        thead > tr > td {border: 1px black solid; background-color: grey;}
+        tbody > tr > td {border: 1px black solid}
+        tfoot > tr > td {border: 1px black solid}
+    </style>
+</head>
+<body>
+    <div>
+        <select>
+            <option>Time</option>
+            <option>Agent Time</option>
+            <option selected>User</option>
+            <option>Agent</option>
+            <option>Person</option>
+            <option>Policy</option>
+            <option>Application</option>
+            <option>Category</option>
+            <option>Match(es)</option>
+            <option>Group</option>
+        </select>
+        <label for="User"></label>
+        <input type="text" id="User" placeholder="User"/>
+        <button>logout</button>
+    </div>
+    <div>
+        <button>Excel Export</button>
+    </div>
+    <div>
+        <select>
+            <option value="30" selected>30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <span style="float: right">total: 3100</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <td>Channel</td>
+                <td>Time</td>
+                <td>Agent Time</td>
+                <td>Activity</td>
+                <td>User</td>
+                <td>Agent</td>
+                <td>Person</td>
+                <td>Policy</td>
+                <td>Application</td>
+                <td>Category</td>
+                <td>Match(es)</td>
+                <td>Match(es)<br/>한글 변환</td>
+                <td>Info/Resource</td>
+                <td>Group</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Channel</td>
+                <td>Time</td>
+                <td>Agent Time</td>
+                <td>Activity</td>
+                <td>User</td>
+                <td>Agent</td>
+                <td>Person</td>
+                <td>Policy</td>
+                <td>Application</td>
+                <td>Category</td>
+                <td>Match(es)</td>
+                <td>Match(es)<br/>한글 변환</td>
+                <td>Info/Resource</td>
+                <td>Group</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="14">
+                    페이징
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>
