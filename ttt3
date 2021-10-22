@@ -1,0 +1,407 @@
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."APPLICATION_VIEW" ("EVIDENCEID", "DATEID", "CHANNEL", "EVIDENCETYPE", "ROWADDEDDATE", "ACTIVITY", "LASTUPDATEDDATE", "APPLICATIONNAME", "RESOURCES", "WINDOWTITLE", "SEARCHABLETEXT", "EVIDENCESTARTTIME", "AGENTLABEL", "USERLABEL", "EVIDENCELABEL", "EVIDENCESTATUS", "CHANNELLABEL", "ACTIVITYLABEL", "HASH", "NAME", "CONTENTSIZE", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(E) use_nl(e agent tu et es c a status ef) */
+
+ e.EVIDENCEID,
+ e.DATEID,
+ e.CHANNEL,
+ e.EVIDENCETYPE,
+ e.ROWADDEDDATE,
+ e.ACTIVITY,
+ e.LASTUPDATEDDATE,
+ e.APPLICATIONNAME,
+ e.RESOURCES,
+ e.WINDOWTITLE,
+ e.SEARCHABLETEXT,
+ e.EVIDENCESTARTTIME,
+ coalesce(agent.label,
+(select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ 
+ma.currentlabel 
+         from mergedagent ma where ma.oldagentid = e.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+(select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ 
+mu.currentlabel 
+        from mergeduser mu where  mu.olduserid = e.userid),
+        'Deleted User') as userLabel,
+    coalesce(et.label, 'unknown') as evidenceLabel,
+    coalesce(es.label, 'unknown') as evidenceStatus,
+    coalesce(c.label, 'unknown') as channelLabel,
+    coalesce(a.label, 'unknown') as activityLabel,
+
+    ef.hash,
+    ef.name,
+    ef.contentsize,
+	status.externalip,
+	status.macaddress,
+	status.agentid
+
+from evidence e, targetSystem agent ,targetUser tu,evidenceType et,evidenceStatus es,channel c,eventType a,agentStatus status,evidencefileview ef
+where e.agentId = agent.agentId
+    and e.userId = tu.userId
+    and e.evidenceType = et.evidenceType
+    and e.status = es.status
+    and e.channel = c.channel
+    and e.activity = a.eventCode
+    and e.agentid = status.agentid
+    and e.evidenceid=ef.evidenceid and e.dateid = ef.dateid
+and e.CHANNEL = 16;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."APPLICATION_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."CLIPBOARD_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "ENCRYPTED", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "WINDOWTITLE", "APPLICATIONNAME", "RESOURCES", "HASH", "NAME", "CONTENTSIZE", "EVIDENCESTARTTIME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(CB) USE_NL(EVIDENCE, EF) USE_HASH(ET, TS, TU, STATUS) */ 
+    cb.EVIDENCEID,cb.DATEID,cb.DEPRECATEDLASTUPDATEDDATE,cb.ENCRYPTED, 
+    CAST(cb.LASTUPDATEDDATE AS TIMESTAMP(6))    LASTUPDATEDDATE,   --> 바인드변수 누락이 생겨 CAST 처리 
+    et.label as activityName,  
+           coalesce(ts.label,  
+                     (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel  
+         from mergedagent ma where ma.oldagentid = evidence.agentid),  
+        'Deleted Agent') as agentLabel,  
+    coalesce(tu.label,  
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel  
+         from mergeduser mu where  mu.olduserid = evidence.userid),  
+        'Deleted User') as userLabel,  
+    evidence.searchableText,  
+    evidence.windowtitle,  
+    evidence.applicationname,  
+    evidence.resources,  
+    ef.hash,  
+    ef.name,  
+    ef.contentsize,  
+ 	evidence.EVIDENCESTARTTIME,  
+	status.externalip,  
+	status.macaddress,  
+	status.agentid  
+from clipboard cb,evidence ,eventType et,targetSystem ts, targetUser tu, agentStatus status, evidencefileview ef  
+where cb.evidenceId = evidence.evidenceId and cb.dateId = evidence.dateId  
+    and evidence.activity = et.eventCode  
+    and evidence.agentId = ts.agentId  
+    and evidence.userId = tu.userId  
+	and evidence.agentid = status.agentid  
+    and cb.evidenceid=ef.evidenceid(+) and cb.dateid = ef.dateid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."CLIPBOARD_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."DEVICE_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "OSTYPE", "LOCALE", "USERNAME", "WINDOWSCDKEY", "REGISTEREDOWNER", "WINDOWSPRODUCTID", "SYSTEMTIME", "SYSTEMTIMECHANGE", "DAMAGEDCOMPONENT", "COMPUTERNAME", "COMMANDLINE", "APINAME", "FILENAME", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "DEVICESEQ", "NAME", "DEVICECLASS", "EXTERNALIP", "MACADDRESS", "AGENTID", "SINGLEID") AS 
+  select /*+ LEADING(evidence) USE_NL(ED, STATUS, TU, PA, SIV) NO_EXPAND */ 
+    siv.EVIDENCEID,siv.DATEID,siv.DEPRECATEDLASTUPDATEDDATE,siv.OSTYPE,siv.LOCALE,siv.USERNAME,siv.WINDOWSCDKEY,siv.REGISTEREDOWNER,siv.WINDOWSPRODUCTID,siv.SYSTEMTIME,siv.SYSTEMTIMECHANGE,siv.DAMAGEDCOMPONENT,siv.COMPUTERNAME,siv.COMMANDLINE,siv.APINAME,siv.FILENAME,evidence.LASTUPDATEDDATE,siv.ACTIVITYNAME,siv.AGENTLABEL,siv.USERLABEL,siv.SEARCHABLETEXT, ed.deviceSeq, ed.name, ed.deviceClass,  
+	status.externalip,  
+	status.macaddress,  
+	status.agentid,  
+    pa.value as singleid  
+from device ed  
+    join evidence on ed.evidenceId = evidence.evidenceId and ed.dateId = evidence.dateId  
+	join systemInfoView siv on ed.evidenceId = siv.evidenceId and ed.dateId = siv.dateId  
+	left join agentStatus status on evidence.agentid = status.agentid  
+    join targetuser tu on tu.userid = evidence.userid  
+    join s_personattribute pa on pa.personid = tu.personid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."DEVICE_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."EMAIL_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "TOADDRESS", "FROMADDRESS", "CC", "BCC", "SUBJECT", "SENTDATE", "TAGGEDTEXT", "BODYEVIDENCEFILESEQ", "ENCRYPTED", "LASTUPDATEDDATE", "URL", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "WINDOWTITLE", "EVIDENCESTARTTIME", "HASH", "NAME", "CONTENTSIZE", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(EMAIL) USE_NL(EVIDENCE, EF) USE_HASH(ET, TS, TU, status) NO_EXPAND */ 
+    email."EVIDENCEID",email."DATEID",email."DEPRECATEDLASTUPDATEDDATE",email."TOADDRESS",email."FROMADDRESS",email."CC",email."BCC",email."SUBJECT",email."SENTDATE",email."TAGGEDTEXT",email."BODYEVIDENCEFILESEQ",email."ENCRYPTED", 
+    CAST(email."LASTUPDATEDDATE" AS TIMESTAMP(6))     LASTUPDATEDDATE, 
+    email."URL", 
+    et.label as activityName, 
+           coalesce(ts.label, 
+                     (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel 
+         from mergedagent ma where ma.oldagentid = evidence.agentid), 
+        'Deleted Agent') as agentLabel, 
+    coalesce(tu.label, 
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel 
+         from mergeduser mu where  mu.olduserid = evidence.userid), 
+        'Deleted User') as userLabel, 
+    evidence.searchableText, 
+    evidence.windowtitle, 
+ 	evidence.EVIDENCESTARTTIME, 
+ 	ef.hash, 
+    ef.name, 
+    ef.contentsize, 
+	status.externalip, 
+	status.macaddress, 
+	status.agentid 
+from email 
+    join evidence on email.evidenceId = evidence.evidenceId and email.dateId = evidence.dateId 
+    join eventType et on evidence.activity = et.eventCode 
+    left join targetSystem ts on evidence.agentId = ts.agentId 
+    left join targetUser tu on evidence.userId = tu.userId 
+--    left join targetUser tu on evidence.userId = tu.userId 
+	left join agentStatus status on evidence.agentid = status.agentid 
+    left join evidencefileview ef on email.evidenceid=ef.evidenceid and email.dateid = ef.dateid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."EMAIL_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."EVENTLOG_VIEW" ("EVIDENCEID", "DATEID", "LOGNAME", "EVENTID", "COMPUTER", "TASKCATEGORY", "OPCODE", "KEYWORDS", "DESCRIPTION", "LOGTIME", "LOGLEVEL", "RECORDID", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "EXTERNALIP", "MACADDRESS", "AGENTID", "EVIDENCESTARTTIME") AS 
+  select /*+ use_nl(evidence el et ts tu status)*/
+	el."EVIDENCEID",el."DATEID",el."LOGNAME",el."EVENTID",el."COMPUTER",el."TASKCATEGORY",el."OPCODE",el."KEYWORDS",el."DESCRIPTION"
+	,el."LOGTIME",el."LOGLEVEL",el."RECORDID",evidence."LASTUPDATEDDATE",
+	et.label as activityName,
+	coalesce(ts.label,
+		(select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = evidence.userid),
+        'Deleted User') as userLabel,
+	status.externalip,
+	status.macaddress,
+	status.agentid,
+	evidence.EVIDENCESTARTTIME
+from eventLog   el,evidence ,eventtype et,targetSystem ts,targetUser tu,agentStatus status
+        where evidence.activity = et.eventCode
+     and evidence.agentId = ts.agentId
+     and evidence.userId = tu.userId
+	and  evidence.agentid = status.agentid
+        and el.evidenceId = evidence.evidenceId and el.dateId = evidence.dateId 
+
+
+
+     --  and evidence.lastupdateddate between to_date('20181022100','yyyymmddhh24mi') - 0 and to_date('20181022100','yyyymmddhh24mi') - 0+interval '2' minute - interval '1' second;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."EVENTLOG_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."EVIDENCE_VIEW" ("EVIDENCEID", "DATEID", "PRIORITY", "USERID", "AGENTID", "TRANSACTIONID", "CHANNEL", "STATUS", "EVIDENCETYPE", "ROWADDEDDATE", "GROUPLISTID", "TRIGGERLISTID", "CATEGORYLISTID", "ACTIVITY", "EVIDENCESTARTTIME", "ISSECURITYSET", "ISTEXTINDEXED", "NEEDSWORK", "PROTOCOLVERSION", "LASTUPDATEDDATE", "EVIDENCEENDTIME", "BASETIME", "SEARCHABLETEXT", "MATCHTEXT", "APPLICATIONNAME", "RUNASUSERNAME", "RESOURCES", "LASTCOMMENT", "PRIMARYEVIDENCEID", "PRIMARYDATEID", "TIMEVERIFIED", "AGENTTIME", "TIMEZONE", "WINDOWTITLE", "COLLECTEDSIZE", "FILECOUNT", "SENTCOUNT", "AGENTLABEL", "USERLABEL", "EVIDENCELABEL", "EVIDENCESTATUS", "CHANNELLABEL", "ACTIVITYLABEL", "PLATFORM", "TRIGGERID", "POLICYLABEL", "HASH", "NAME", "CONTENTSIZE", "EXTERNALIP", "MACADDRESS") AS 
+  select /*+ LEADING(E) USE_NL(EVT, EF) USE_HASH(STATUS, AGENT, TU, ET, ES, C, A, PT) */
+    e."EVIDENCEID",e."DATEID",e."PRIORITY",e."USERID",e."AGENTID",e."TRANSACTIONID",e."CHANNEL",e."STATUS",e."EVIDENCETYPE",e."ROWADDEDDATE",e."GROUPLISTID",e."TRIGGERLISTID",e."CATEGORYLISTID",e."ACTIVITY",e."EVIDENCESTARTTIME",e."ISSECURITYSET",e."ISTEXTINDEXED",e."NEEDSWORK",e."PROTOCOLVERSION",e."LASTUPDATEDDATE",e."EVIDENCEENDTIME",e."BASETIME",e."SEARCHABLETEXT",e."MATCHTEXT",e."APPLICATIONNAME",e."RUNASUSERNAME",e."RESOURCES",e."LASTCOMMENT",e."PRIMARYEVIDENCEID",e."PRIMARYDATEID",e."TIMEVERIFIED",e."AGENTTIME",e."TIMEZONE",e."WINDOWTITLE",e."COLLECTEDSIZE",e."FILECOUNT",e."SENTCOUNT",
+	coalesce(agent.label,
+		(select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = e.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = e.userid),
+        'Deleted User') as userLabel,
+    coalesce(et.label, 'unknown') as evidenceLabel,
+    coalesce(es.label, 'unknown') as evidenceStatus,
+    coalesce(c.label, 'unknown') as channelLabel,
+    coalesce(a.label, 'unknown') as activityLabel,
+    agent.platform,
+	evt.TRIGGERID,
+	pt.LABEL as PolicyLabel,
+    ef.hash,
+	ef.name,
+    ef.contentsize,
+	status.externalip,
+	status.macaddress
+
+from evidence e,targetSystem agent,targetUser tu,evidenceType et ,evidenceStatus es,channel c ,eventType a,EVIDENCETRIGGER evt
+  ,POLICYTRIGGER pt,agentStatus status,evidencefileview ef
+where e.agentId = agent.agentId
+    and e.userId = tu.userId
+    and e.evidenceType = et.evidenceType
+    and e.status = es.status
+    and e.channel = c.channel
+    and e.activity = a.eventCode
+	and e.EVIDENCEID = evt.EVIDENCEID
+	and evt.TRIGGERID = pt.TRIGGERID
+	and e.dateid = evt.dateid
+    and e.agentid = status.agentid
+    and e.evidenceid=ef.evidenceid and e.dateid = ef.dateid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."EVIDENCE_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."EVIDENCEFILE_VIEW" ("EVIDENCEID", "DATEID", "EVIDENCEFILESEQ", "EVIDENCEFILETYPE", "ROWADDEDDATE", "DEPRECATEDLASTUPDATEDDATE", "NAME", "HASH", "HASHPARTITION", "CONTENTSIZE", "SOURCEPATH", "DESTINATIONPATH", "FIELDNAME", "CONTENTASPECT", "TEXTMODE", "REGISTRYTYPE", "VALUE", "DATATYPE", "COLLECTTIME", "LASTUPDATEDDATE", "BINARYDATATYPE", "BINARYCHARSET", "TEXTDATATYPE", "AGENTLABEL", "TEXTCHARSET", "BINARYEXISTS", "TEXTEXISTS", "EXTERNALIP", "MACADDRESS", "AGENTID", "SINGLEID") AS 
+  select /* INDEX( ef PK_EVIDENCEFILE ) */
+    ef."EVIDENCEID",ef."DATEID",ef."EVIDENCEFILESEQ",ef."EVIDENCEFILETYPE",ef."ROWADDEDDATE",ef."DEPRECATEDLASTUPDATEDDATE",ef."NAME",ef."HASH",ef."HASHPARTITION",ef."CONTENTSIZE",ef."SOURCEPATH",ef."DESTINATIONPATH",ef."FIELDNAME",ef."CONTENTASPECT",ef."TEXTMODE",ef."REGISTRYTYPE",ef."VALUE",ef."DATATYPE",ef."COLLECTTIME",evidence."LASTUPDATEDDATE",
+    coalesce(ccd.dataType, ef.dataType) as binaryDataType,
+    ccd.charSet as binaryCharSet,
+    coalesce(te.dataType, ef.dataType) as textDataType,
+	coalesce(agent.label,
+		(select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    te.charSet as textCharSet,
+    case when ccd.hash is null then 'N' else 'Y' end as binaryExists,
+    case when te.hash is null then 'N' else 'Y' end as textExists,
+	status.externalip,
+	status.macaddress,
+	status.agentid,
+    pa.value as singleid
+
+
+from evidenceFile ef
+	join evidence on ef.evidenceId = evidence.evidenceId and ef.dateId = evidence.dateId
+	left join targetSystem agent on evidence.agentId = agent.agentId	
+    left join collectionContextData ccd
+        on ef.hash = ccd.hash
+        and ef.hashPartition = ccd.partition
+        and ef.contentAspect in (1,3)
+    left join textExtract te
+        on ef.hash = te.hash
+        and ef.hashPartition = te.partition
+        and ef.contentAspect in (2,3)
+	left join agentStatus status on evidence.agentid = status.agentid
+    join targetuser tu on tu.userid = evidence.userid
+    join s_personattribute pa on pa.personid = tu.personid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."EVIDENCEFILE_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."FILE_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "PATH", "MOUNTTYPE", "SOURCEDRIVELETTER", "SOURCEREMOVABLE", "SOURCEDEVICETYPE", "SOURCEDEVICENAME", "SOURCEFILESYSTEMTYPE", "SOURCESERIALNUMBER", "DESTINATIONPATH", "DESTREMOVABLE", "DESTDEVICETYPE", "DESTDEVICENAME", "DESTDRIVELETTER", "DESTFILESYSTEMTYPE", "DESTSERIALNUMBER", "ATTRIBUTES", "LASTMODIFIED", "CREATETIME", "ENCRYPTED", "NAME", "HDNEW", "HDPOWERONWITHOUTAGENT", "HDRUNTIMEWITHOUTAGENT", "LASTUPDATEDDATE", "SMARTSUPPORT", "SOURCEDEVICEBUSTYPE", "SOURCEVOLUMENAME", "SOURCEVOLUMESERIALNUMBER", "DESTDEVICEBUSTYPE", "DESTVOLUMENAME", "DESTVOLUMESERIALNUMBER", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "APPLICATIONNAME", "WINDOWTITLE", "HASH", "HASHNAME", "CONTENTSIZE", "EVIDENCESTARTTIME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(E) USE_NL(FILES, EF) USE_HASH(ET, TS, TU, STATUS) */
+    files."EVIDENCEID",files."DATEID",files."DEPRECATEDLASTUPDATEDDATE",files."PATH",files."MOUNTTYPE",files."SOURCEDRIVELETTER",files."SOURCEREMOVABLE",files."SOURCEDEVICETYPE",files."SOURCEDEVICENAME",files."SOURCEFILESYSTEMTYPE",files."SOURCESERIALNUMBER",files."DESTINATIONPATH",files."DESTREMOVABLE",files."DESTDEVICETYPE",files."DESTDEVICENAME",files."DESTDRIVELETTER",files."DESTFILESYSTEMTYPE",files."DESTSERIALNUMBER",files."ATTRIBUTES",files."LASTMODIFIED",files."CREATETIME",files."ENCRYPTED",files."NAME",files."HDNEW",files."HDPOWERONWITHOUTAGENT",files."HDRUNTIMEWITHOUTAGENT",evidence."LASTUPDATEDDATE",files."SMARTSUPPORT",files."SOURCEDEVICEBUSTYPE",files."SOURCEVOLUMENAME",files."SOURCEVOLUMESERIALNUMBER",files."DESTDEVICEBUSTYPE",files."DESTVOLUMENAME",files."DESTVOLUMESERIALNUMBER",
+    et.label as activityName,
+           coalesce(ts.label,
+                     (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = evidence.userid),
+        'Deleted User') as userLabel,
+    evidence.searchableText,
+    evidence.applicationname,
+    evidence.windowtitle,
+    ef.hash as hash,
+	ef.name as hashname,
+    ef.contentsize,
+ 	evidence.EVIDENCESTARTTIME,
+	status.externalip,
+	status.macaddress,
+	status.agentid
+
+from files,evidence,eventType et,targetSystem ts,targetUser tu ,agentStatus status,evidencefileview ef
+where  files.evidenceId = evidence.evidenceId and files.dateId = evidence.dateId
+   and evidence.activity = et.eventCode
+   and evidence.agentId = ts.agentId
+    and evidence.userId = tu.userId
+    and evidence.agentid = status.agentid
+   and files.evidenceid=ef.evidenceid and files.dateid = ef.dateid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."FILE_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."HTTP_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "URL", "PROTOCOL", "HOST", "DOMAIN", "PORT", "REQUESTMETHOD", "RESPONSESTATUS", "FROMCACHE", "CHARSET", "REFERRER", "HTMLEVIDENCEFILESEQ", "REQUESTHEADEREVIDENCEFILESEQ", "RESPONSEHEADEREVIDENCEFILESEQ", "ENCRYPTED", "LASTUPDATEDDATE", "USEDCERTIFICATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "HASH", "HASHPARTITION", "CONTENTSIZE", "NAME", "SOURCEPATH", "DESTINATIONPATH", "SEARCHABLETEXT", "APPLICATIONNAME", "WINDOWTITLE", "VALUE", "EVIDENCESTARTTIME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(EVIDENCE, HTTP, HF) USE_NL(HTTP, HF) USE_HASH(ET, TS, TU, STATUS) */
+    http."EVIDENCEID",http."DATEID",http."DEPRECATEDLASTUPDATEDDATE",http."URL",http."PROTOCOL",http."HOST",http."DOMAIN",http."PORT",http."REQUESTMETHOD",http."RESPONSESTATUS",http."FROMCACHE",http."CHARSET",http."REFERRER",http."HTMLEVIDENCEFILESEQ",http."REQUESTHEADEREVIDENCEFILESEQ",http."RESPONSEHEADEREVIDENCEFILESEQ",http."ENCRYPTED",evidence."LASTUPDATEDDATE",http."USEDCERTIFICATE",
+    et.label as activityName,
+           coalesce(ts.label,
+                     (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = evidence.userid),
+        'Deleted User') as userLabel,
+    hf.hash,
+    hf.hashPartition,
+    hf.contentSize,
+    hf.name,
+    hf.sourcePath,
+    hf.destinationPath,
+    evidence.searchableText,
+    evidence.applicationname,
+    evidence.windowtitle,
+    hf.value,
+ 	evidence.EVIDENCESTARTTIME,
+	status.externalip,
+	status.macaddress,
+	status.agentid
+from http,evidencefileview hf, evidence,eventType et,targetSystem ts ,targetUser tu ,agentStatus status
+where hf.evidenceId = http.evidenceId and hf.dateId = http.dateId
+    and http.evidenceId = evidence.evidenceId and http.dateId = evidence.dateId
+    and evidence.activity = et.eventCode
+    and evidence.agentId = ts.agentId
+    and evidence.userId = tu.userId
+    and evidence.agentid = status.agentid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."HTTP_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."INSTALLEDAPPLICATION_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "OSTYPE", "LOCALE", "USERNAME", "WINDOWSCDKEY", "REGISTEREDOWNER", "WINDOWSPRODUCTID", "SYSTEMTIME", "SYSTEMTIMECHANGE", "DAMAGEDCOMPONENT", "COMPUTERNAME", "COMMANDLINE", "APINAME", "FILENAME", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "NAME", "PATH", "VERSION", "PUBLISHER", "EXTERNALIP", "MACADDRESS", "AGENTID", "SINGLEID") AS 
+  select /*+use_nl(ia evidence siv status tu pa)*/
+siv."EVIDENCEID",siv."DATEID",siv."DEPRECATEDLASTUPDATEDDATE",siv."OSTYPE",siv."LOCALE",siv."USERNAME",siv."WINDOWSCDKEY",siv."REGISTEREDOWNER",siv."WINDOWSPRODUCTID",siv."SYSTEMTIME",siv."SYSTEMTIMECHANGE",siv."DAMAGEDCOMPONENT",siv."COMPUTERNAME",siv."COMMANDLINE",siv."APINAME",siv."FILENAME",evidence."LASTUPDATEDDATE",siv."ACTIVITYNAME",siv."AGENTLABEL",siv."USERLABEL",siv."SEARCHABLETEXT", ia.name, ia.path, ia.version, ia.publisher,
+	status.externalip,
+	status.macaddress,
+	status.agentid,
+    pa.value as singleid
+
+from installedApplication ia,evidence,systemInfoView siv,agentStatus status ,targetuser tu,s_personattribute pa
+where ia.evidenceId = evidence.evidenceId and ia.dateId = evidence.dateId
+	and ia.evidenceId = siv.evidenceId and ia.dateId = siv.dateId
+	and evidence.agentid = status.agentid
+    and tu.userid = evidence.userid
+    and pa.personid = tu.personid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."INSTALLEDAPPLICATION_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."KEYBOARD_VIEW" ("EVIDENCEID", "DATEID", "ELEMENTINDEX", "KEYBOARDELEMENTSEQ", "LABEL", "INITIALVALUE", "INITIALVALUESIZE", "INPUTTEXT", "INPUTTEXTSIZE", "RAWKEYSTROKETEXT", "RAWKEYSTROKETEXTSIZE", "NAME", "CLASSNAME", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "ROWADDEDDATE", "WINDOWTITLE", "APPLICATIONNAME", "EVIDENCESTARTTIME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+use_nl(kb evidence et ts tu status)*/
+	kb.EVIDENCEID,
+	kb.DATEID,
+	kb.ELEMENTINDEX,
+	kb.KEYBOARDELEMENTSEQ,
+	kb.LABEL,
+	kb.INITIALVALUE,
+	kb.INITIALVALUESIZE,
+	kb.INPUTTEXT,
+	kb.INPUTTEXTSIZE,
+	kb.RAWKEYSTROKETEXT,
+	kb.RAWKEYSTROKETEXTSIZE,
+	kb.NAME,
+	kb.CLASSNAME,
+	evidence.LASTUPDATEDDATE,
+    et.label as activityName,
+	coalesce(ts.label,
+	(select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ 
+	ma.currentlabel from mergedagent ma where ma.oldagentid = 
+	evidence.agentid), 'Deleted Agent') as agentLabel, 
+	coalesce(tu.label, (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME 
+	) */ mu.currentlabel from mergeduser mu where mu.olduserid = 
+	evidence.userid), 'Deleted User') as userLabel, 
+	evidence.searchableText,
+	evidence.ROWADDEDDATE, 
+	evidence.WINDOWTITLE, 
+	evidence.APPLICATIONNAME, 
+	evidence.EVIDENCESTARTTIME,
+	status.externalip,
+	status.macaddress,
+	status.agentid
+from KEYBOARDELEMENT kb,evidence,eventType et,targetSystem ts ,targetUser tu,agentStatus status
+	where kb.evidenceId = evidence.evidenceId and kb.dateId = evidence.dateId 
+	and evidence.activity = et.eventCode 
+	and evidence.agentId = ts.agentId 
+	and evidence.userId = tu.userId
+	and evidence.agentid = status.agentid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."KEYBOARD_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."LOGON_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "USERNAME", "PASSWORD", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "EVIDENCESTARTTIME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(logon) USE_NL(evidence) USE_HASH(ET, TS, TU, STATUS) NO_EXPAND NO_QUERY_TRANSFORMATION */
+    logon."EVIDENCEID",logon."DATEID",logon."DEPRECATEDLASTUPDATEDDATE",logon."USERNAME",logon."PASSWORD",
+    CAST(logon."LASTUPDATEDDATE" AS TIMESTAMP(6))    LASTUPDATEDDATE,   --> 바인드변수 누락이 생겨 CAST 처리
+    et.label as activityName,
+ coalesce(ts.label,
+  (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = evidence.userid),
+        'Deleted User') as userLabel,
+    evidence.searchableText,
+ 	evidence.EVIDENCESTARTTIME,
+ 	status.externalip,
+	status.macaddress,
+	status.agentid
+from logon
+    join evidence on logon.evidenceId = evidence.evidenceId and logon.dateId = evidence.dateId
+    join eventType et on evidence.activity = et.eventCode
+    left join targetSystem ts on evidence.agentId = ts.agentId
+    left join targetUser tu on evidence.userId = tu.userId
+    left join agentStatus status on evidence.agentid = status.agentid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."LOGON_VIEW" TO "FIT_VIEW";
+
