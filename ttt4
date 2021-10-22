@@ -1,0 +1,483 @@
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."NETWORK_VIEW" ("EVIDENCEID", "DATEID", "ENCRYPTED", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "EVIDENCESTARTTIME", "PROTOCOL", "IPVERSION", "LOCALIP", "REMOTEIP", "LOCALPORT", "REMOTEPORT", "BYTESRECEIVED", "BYTESSENT", "DOMAIN", "URL", "MACADDRESS", "AGENTID", "EXTERNALIP") AS 
+  select
+nw."EVIDENCEID",
+nw."DATEID",
+nw."ENCRYPTED",
+e."LASTUPDATEDDATE",
+et.label as activityName,
+coalesce(ts.label,
+    (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+    from mergedagent ma where ma.oldagentid = e.agentid),
+    'Deleted Agent') as agentLabel,
+coalesce(tu.label,
+    (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+    from mergeduser mu where  mu.olduserid = e.userid),
+    'Deleted User') as userLabel,
+e.searchableText,
+e.EVIDENCESTARTTIME,
+nw."PROTOCOL",
+nw."IPVERSION",
+nw."LOCALIP",
+nw."REMOTEIP",
+nw."LOCALPORT",
+nw."REMOTEPORT",
+nw."BYTESRECEIVED",
+nw."BYTESSENT",
+nw."DOMAIN",
+nw."URL",
+ast.macaddress,
+ast.agentid,
+ast.externalip
+from network nw, evidence e, eventtype et, targetuser tu, targetsystem ts, agentstatus ast
+where nw.evidenceid=e.evidenceid and nw.dateid=e.dateid
+and et.eventcode=e.activity and tu.userid=e.userid and ts.agentid=e.agentid
+and ast.agentid=e.agentid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."NETWORK_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."PRINTER_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "NAME", "PRINTJOBTITLE", "DEVICETYPE", "DEVICENAME", "PAGESPRINTED", "NUMCOPIES", "DOCUMENTTITLE", "DOCUMENTPATH", "PAPERTYPE", "PAGERANGE", "JOBID", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "WINDOWTITLE", "EVIDENCESTARTTIME", "HASH", "HASHNAME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select /*+ LEADING(PRINTER) USE_NL(EVIDENCE, EF) USE_HASH(ET, TS, TU, STATUS) NO_EXPAND */
+    printer."EVIDENCEID",printer."DATEID",printer."DEPRECATEDLASTUPDATEDDATE",printer."NAME",printer."PRINTJOBTITLE",printer."DEVICETYPE",printer."DEVICENAME",printer."PAGESPRINTED",printer."NUMCOPIES",printer."DOCUMENTTITLE",printer."DOCUMENTPATH",printer."PAPERTYPE",printer."PAGERANGE",printer."JOBID",
+    CAST(printer."LASTUPDATEDDATE" AS TIMESTAMP(6))     LASTUPDATEDDATE,   --> 바인드변수 누락이 생겨 CAST 처리
+    et.label as activityName,
+           coalesce(ts.label,
+                     (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = evidence.userid),
+        'Deleted User') as userLabel,
+    evidence.searchableText,
+    evidence.windowtitle,
+ 	evidence.EVIDENCESTARTTIME,
+ 	ef.hash as hash,
+	ef.name as hashname,
+	status.externalip,
+	status.macaddress,
+	status.agentid
+from printer
+    join evidence on printer.evidenceId = evidence.evidenceId and printer.dateId = evidence.dateId
+    join eventType et on evidence.activity = et.eventCode
+    left join targetSystem ts on evidence.agentId = ts.agentId
+    left join targetUser tu on evidence.userId = tu.userId
+    left join agentStatus status on evidence.agentid = status.agentid
+    left join evidencefileview ef on printer.evidenceid=ef.evidenceid and printer.dateid = ef.dateid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."PRINTER_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."PROCESS_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "PID", "PARENTPID", "ARGUMENTS", "PARENTNAME", "INPUTHANDLE", "OUTPUTHANDLE", "ERRORHANDLE", "DESKTOPNAME", "LOGGEDINUSER", "WINDOWLAUNCHSTATE", "WINDOWSIZE", "WINDOWSTYLEFLAGS", "WINDOWVISIBILITY", "CONSOLEHANDLE", "APPLICATIONVERSION", "APPLICATIONPATH", "EXECUTABLEHASH", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "WINDOWTITLE", "EVIDENCESTARTTIME", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select
+     /*+ LEADING(EVIDENCE) USE_NL(PR) USE_HASH(ET TS TU STATUS) */
+    pr."EVIDENCEID",pr."DATEID",pr."DEPRECATEDLASTUPDATEDDATE",pr."PID",pr."PARENTPID",pr."ARGUMENTS",pr."PARENTNAME",pr."INPUTHANDLE",pr."OUTPUTHANDLE",pr."ERRORHANDLE",pr."DESKTOPNAME",pr."LOGGEDINUSER",pr."WINDOWLAUNCHSTATE",pr."WINDOWSIZE",pr."WINDOWSTYLEFLAGS",pr."WINDOWVISIBILITY",pr."CONSOLEHANDLE",pr."APPLICATIONVERSION",pr."APPLICATIONPATH",pr."EXECUTABLEHASH",evidence."LASTUPDATEDDATE",
+    et.label as activityName,
+           coalesce(ts.label,
+                     (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+         from mergedagent ma where ma.oldagentid = evidence.agentid),
+        'Deleted Agent') as agentLabel,
+    coalesce(tu.label,
+        (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+         from mergeduser mu where  mu.olduserid = evidence.userid),
+        'Deleted User') as userLabel,
+    evidence.searchableText,
+    evidence.WINDOWTITLE,
+ 	evidence.EVIDENCESTARTTIME,
+ 	status.externalip,
+	status.macaddress,
+	status.agentid
+
+from process pr,evidence ,eventType et,targetSystem ts,targetUser tu,agentStatus status
+where pr.evidenceId = evidence.evidenceId and pr.dateId = evidence.dateId
+    and evidence.activity = et.eventCode
+    and evidence.agentId = ts.agentId
+    and evidence.userId = tu.userId
+    and evidence.agentid = status.agentid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."PROCESS_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."REGISTRY_VIEW" ("EVIDENCEID", "DATEID", "CHANNEL", "EVIDENCETYPE", "ROWADDEDDATE", "ACTIVITY", "LASTUPDATEDDATE", "APPLICATIONNAME", "WINDOWTITLE", "SEARCHABLETEXT", "EVIDENCESTARTTIME", "AGENTLABEL", "USERLABEL", "EXTERNALIP", "MACADDRESS", "AGENTID") AS 
+  select
+e.EVIDENCEID,
+ e.DATEID,
+ e.CHANNEL,
+ e.EVIDENCETYPE,
+ e.ROWADDEDDATE,
+ e.ACTIVITY,
+ e.LASTUPDATEDDATE,
+ e.APPLICATIONNAME,
+ e.WINDOWTITLE,
+ e.SEARCHABLETEXT,
+ e.EVIDENCESTARTTIME,
+coalesce(ts.label,
+    (select /*+ INDEX( ma IX_MERGEDAGENT_OLDID_TIME ) */ ma.currentlabel
+    from mergedagent ma where ma.oldagentid = e.agentid),
+    'Deleted Agent') as agentLabel,
+coalesce(tu.label,
+    (select /*+ INDEX( ma IX_MERGEDUSER_OLDID_TIME ) */ mu.currentlabel
+    from mergeduser mu where  mu.olduserid = e.userid),
+    'Deleted User') as userLabel,
+ast.macaddress,
+ast.agentid,
+ast.externalip
+from evidence e, eventtype et, targetuser tu, targetsystem ts, agentstatus ast
+where et.eventcode=e.activity and tu.userid=e.userid and ts.agentid=e.agentid
+and ast.agentid=e.agentid
+and e.channel=20;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."REGISTRY_VIEW" TO "FIT_VIEW";
+
+  CREATE OR REPLACE FORCE VIEW "C60_DBOWNER"."RUNNINGSERVICE_VIEW" ("EVIDENCEID", "DATEID", "DEPRECATEDLASTUPDATEDDATE", "OSTYPE", "LOCALE", "USERNAME", "WINDOWSCDKEY", "REGISTEREDOWNER", "WINDOWSPRODUCTID", "SYSTEMTIME", "SYSTEMTIMECHANGE", "DAMAGEDCOMPONENT", "COMPUTERNAME", "COMMANDLINE", "APINAME", "FILENAME", "LASTUPDATEDDATE", "ACTIVITYNAME", "AGENTLABEL", "USERLABEL", "SEARCHABLETEXT", "NAME", "STATUS", "EXTERNALIP", "MACADDRESS", "AGENTID", "SINGLEID") AS 
+  select /*+use_nl (rs evidence siv status tu pa)*/
+siv."EVIDENCEID",siv."DATEID",siv."DEPRECATEDLASTUPDATEDDATE",siv."OSTYPE",siv."LOCALE",siv."USERNAME",siv."WINDOWSCDKEY",siv."REGISTEREDOWNER",siv."WINDOWSPRODUCTID",siv."SYSTEMTIME",siv."SYSTEMTIMECHANGE",siv."DAMAGEDCOMPONENT",siv."COMPUTERNAME",siv."COMMANDLINE",siv."APINAME",siv."FILENAME",evidence."LASTUPDATEDDATE",siv."ACTIVITYNAME",siv."AGENTLABEL",siv."USERLABEL",siv."SEARCHABLETEXT", rs.name, rs.status,
+	status.externalip,
+	status.macaddress,
+	status.agentid,
+    pa.value as singleid
+
+from runningService rs,evidence,systemInfoView siv ,agentStatus status,targetuser tu,s_personattribute pa
+    where rs.evidenceId = evidence.evidenceId and rs.dateId = evidence.dateId
+    and rs.evidenceId = siv.evidenceId and rs.dateId = siv.dateId
+	and evidence.agentid = status.agentid
+    and tu.userid = evidence.userid
+    and pa.personid = tu.personid;
+
+
+  GRANT SELECT ON "C60_DBOWNER"."RUNNINGSERVICE_VIEW" TO "FIT_VIEW";
+
+=======================================================================
+
+create or replace PROCEDURE INSERT_SIEM_TABLES
+IS
+V_JOB_TIME        DATE;
+V_COND_START_TIME TIMESTAMP;
+V_COND_END_TIME   TIMESTAMP;
+V_ROW_COUNT       NUMBER;
+V_ERR_MSG         VARCHAR2(1000);
+V_RUN_STR         VARCHAR2(1000);
+BEGIN
+    
+    -- 00.시간계산
+    SELECT A.CUR_TIME               JOB_TIME
+          ,CAST(A.END_TIME - 32/24/60 AS TIMESTAMP)   COND_START_TIME  -- LASTUPDATEDDATE >= 시작시간 
+          ,CAST(A.END_TIME            AS TIMESTAMP)   COND_END_TIME    -- LASTUPDATEDDATE <  종료시간
+      INTO V_JOB_TIME
+          ,V_COND_START_TIME
+          ,V_COND_END_TIME
+      FROM (
+            SELECT A.*
+                   -- CURRENT HOUR           + Target End Minute - 9 Hour
+                  ,TRUNC(A.CUR_TIME, 'HH24') + A.END_MIN/24/60 - 9/24  END_TIME    --> 종료시간 
+              FROM (
+                    SELECT A.CUR_TIME                    CUR_TIME    --> 현재시간       
+                          ,CASE WHEN EXTRACT(MINUTE FROM CAST(A.CUR_TIME AS TIMESTAMP) ) BETWEEN 0 AND 29
+                             THEN 0
+                             ELSE 30
+                           END                           END_MIN     --> 종료 분
+                      FROM (
+                            SELECT SYSDATE        CUR_TIME    --> 현재시간
+                              FROM DUAL
+                           ) A
+                   ) A
+           ) A
+    ;
+    
+    -- 10.대상
+    FOR X IN (
+            ------------------------------------------------------------------------------------------
+            SELECT A.*
+                  ,'INSERT INTO ' || RPAD(A.TGT_TABLE_NAME, 30, ' ') || ' SELECT A.*, ''N'' FROM ' || RPAD(A.SRC_TABLE_NAME, 30, ' ') || ' A WHERE A.LASTUPDATEDDATE >= :V_COND_START_TIME AND A.LASTUPDATEDDATE < :V_COND_END_TIME '
+                                          INSERT_STR
+              FROM (
+                    SELECT A.TABLE_NAME                   TABLE_NAME
+                          ,A.TABLE_NAME                   TGT_TABLE_NAME
+                          ,SUBSTR(A.TABLE_NAME, 5)        SRC_TABLE_NAME
+                      FROM USER_TABLES  A
+                     WHERE A.TABLE_NAME IN 
+                          (TRIM('TMP_APPLICATION_VIEW         ')  
+                          ,TRIM('TMP_CLIPBOARD_VIEW           ')
+                          ,TRIM('TMP_DEVICE_VIEW              ')
+                          ,TRIM('TMP_EMAIL_VIEW               ')
+                          ,TRIM('TMP_EVENTLOG_VIEW            ')
+                          ,TRIM('TMP_EVIDENCEFILE_VIEW        ')
+                          ,TRIM('TMP_EVIDENCE_VIEW            ')
+                          ,TRIM('TMP_FILE_VIEW                ')
+                          ,TRIM('TMP_HTTP_VIEW                ')
+                          ,TRIM('TMP_INSTALLEDAPPLICATION_VIEW')
+                          ,TRIM('TMP_KEYBOARD_VIEW            ')
+                          ,TRIM('TMP_LOGON_VIEW               ')
+                          ,TRIM('TMP_NETWORK_VIEW             ')
+                          ,TRIM('TMP_PRINTER_VIEW             ')
+                          ,TRIM('TMP_PROCESS_VIEW             ')
+                          ,TRIM('TMP_REGISTRY_VIEW            ')
+                          ,TRIM('TMP_RUNNINGSERVICE_VIEW      ')
+                          ,TRIM('TMP_SYSTEMINFO_VIEW          ')
+                          )
+                   ) A
+             ORDER BY 1
+            ------------------------------------------------------------------------------------------
+             )
+    LOOP
+        -- 10-1.LOG INSERT
+        INSERT INTO TMP_INSERT_SIEM_TABLES_LOG VALUES(V_JOB_TIME, X.TABLE_NAME, V_COND_START_TIME, V_COND_END_TIME, SYSDATE, NULL, NULL, NULL);
+        COMMIT;
+        
+        V_ROW_COUNT := NULL;
+        V_ERR_MSG   := NULL;
+        
+        -- 10-2.DATA INSERT
+        BEGIN
+            -- INSERT
+            EXECUTE IMMEDIATE X.INSERT_STR USING V_COND_START_TIME, V_COND_END_TIME;
+            
+            V_ROW_COUNT := SQL%ROWCOUNT;
+            
+            COMMIT;
+            
+        EXCEPTION WHEN OTHERS
+            THEN V_ERR_MSG := SUBSTR(SQLERRM, 1, 1000);
+                 ROLLBACK;
+        END;
+        
+        -- 10-3.LOG UPDATE
+        UPDATE TMP_INSERT_SIEM_TABLES_LOG T
+           SET T.END_TIME   = SYSDATE
+              ,T.ROW_COUNT  = V_ROW_COUNT
+              ,T.ERR_MSG    = V_ERR_MSG
+         WHERE T.JOB_TIME   = V_JOB_TIME
+           AND T.TABLE_NAME = X.TABLE_NAME
+        ;
+        
+        COMMIT;
+        
+    END LOOP;
+END;
+
+create or replace procedure delete_siem_tables
+is
+begin
+
+begin 
+    loop 
+    delete TMP_APPLICATION_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound; --커서(쿼리)에서 조회된 수가 0이면 TRUE, 아니면 FALSE를 반환
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_CLIPBOARD_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_DEVICE_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_EMAIL_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_EVENTLOG_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_EVIDENCEFILE_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_EVIDENCE_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_FILE_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_HTTP_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_INSTALLEDAPPLICATION_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_KEYBOARD_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop 
+    delete TMP_LOGON_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop
+    delete TMP_PRINTER_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop
+    delete TMP_PROCESS_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop
+    delete TMP_RUNNINGSERVICE_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop
+    delete TMP_SYSTEMINFO_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop
+    delete tmp_network_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+begin 
+    loop
+    delete tmp_registry_VIEW where r_flag ='Y' and rownum <100000;
+    exit when sql%notfound;
+    commit;
+    end loop;
+commit;
+end;
+
+end;
+
+
+create or replace procedure siem_delete_count_p
+is
+begin
+    insert into siem_delete_count values (
+    sysdate,--delete_Date
+    (select count(*) from TMP_APPLICATION_VIEW where r_flag ='Y'),
+    (select count(*) from TMP_CLIPBOARD_VIEW where r_flag ='Y'),
+    (select count(*) from TMP_DEVICE_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_EMAIL_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_EVENTLOG_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_EVIDENCEFILE_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_EVIDENCE_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_FILE_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_HTTP_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_INSTALLEDAPPLICATION_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_KEYBOARD_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_LOGON_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_PRINTER_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_PROCESS_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_RUNNINGSERVICE_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_SYSTEMINFO_VIEW where r_flag ='Y'), 
+    (select count(*) from TMP_network_view where r_flag ='Y'), 
+    (select count(*) from TMP_registry_view where r_flag ='Y')
+    );
+end;
+
+
+---------------------
+
+  CREATE TABLE "C60_DBOWNER"."SIEM_DELETE_COUNT" 
+   (	"delete_Date" TIMESTAMP (9), 
+	"APPLICATION" NUMBER(10,0), 
+	"CLIPBOARD" NUMBER(10,0), 
+	"DEVICE" NUMBER(10,0), 
+	"EMAIL" NUMBER(10,0), 
+	"EVENTLOG" NUMBER(10,0), 
+	"EVIDENCEFILE" NUMBER(10,0), 
+	"EVIDENCE" NUMBER(10,0), 
+	"FILE" NUMBER(10,0), 
+	"HTTP" NUMBER(10,0), 
+	"INSTALLEDAPPLICATION" NUMBER(10,0), 
+	"KEYBOARD" NUMBER(10,0), 
+	"LOGON" NUMBER(10,0), 
+	"PRINTER" NUMBER(10,0), 
+	"PROCESS" NUMBER(10,0), 
+	"RUNNINGSERVICE" NUMBER(10,0), 
+	"SYSTEMINFO" NUMBER(10,0), 
+	"NETWORKS" NUMBER(10,0), 
+	"REGISTRY" NUMBER(10,0)
+   ) SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
+ NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+  BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "USR_C60_DEFAULT" ;
