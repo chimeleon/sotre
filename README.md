@@ -6,3 +6,5 @@
 빌드는 git 내용을 모두 pull 한 뒤 아래 명령을 소스폴더 루트에서 실행하면 build/libs 폴더에 새 모듈이 생성됩니다.
 
 gradle clean build -x test
+
+
