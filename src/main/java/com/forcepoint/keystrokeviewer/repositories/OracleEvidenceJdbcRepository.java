@@ -44,30 +44,49 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
     @Autowired
     private CategoryRepository categoryRepository;
 
-    private final String countQuery = "SELECT /*+ NO_INDEX( e ix_evidence_appl ix_evidence_needswork ix_evidence_user_dateid ix_evidence_agent_dateid ix_evidence_status_dateid ix_evidence_channel_dateid ix_evidence_evdtype_dateid ix_evidence_activity_dateid ix_evidence_catlist_dateid ix_evidence_grplstid_dateid ix_evidence_primaryevidence ix_evidence_priority_dateid ix_evidence_trglstid_dateid ix_evidence_dateid_starttime) FIRST_ROWS(1) NO_MERGE NO_EXPAND_TABLE(e) */COUNT(e.evidenceid) FROM evidence e";
+    private final String countQuery = "SELECT " +
+            "/*+ NO_INDEX( e ix_evidence_appl ix_evidence_needswork ix_evidence_user_dateid ix_evidence_agent_dateid ix_evidence_status_dateid ix_evidence_channel_dateid ix_evidence_evdtype_dateid ix_evidence_activity_dateid ix_evidence_catlist_dateid ix_evidence_grplstid_dateid ix_evidence_primaryevidence ix_evidence_priority_dateid ix_evidence_trglstid_dateid ix_evidence_dateid_starttime) FIRST_ROWS(1) NO_MERGE NO_EXPAND_TABLE(e) */" +
+            "COUNT(e.evidenceid) " +
+            "FROM evidence e";
 
-    private final String query = "select rownum, e.CHANNEL,\n"+
-            "e.EVIDENCETYPE,\n" +
-            "e2.LABEL as Activity,\n" +
-            "e.EVIDENCESTARTTIME,\n" +
-            "e.EVIDENCEID,\n" +
-            "e.MATCHTEXT,\n" +
-            "e.APPLICATIONNAME,\n" +
-            "e.RESOURCES ,\n" +
-            "e.AGENTTIME ,\n" +
-            "t.LABEL AS USERNAME,\n" +
-            "t.SAMACCOUNTNAME AS PERSON,\n" +
-            "a.LABEL AS AGENTLABEL,\n" +
-            "e.CATEGORYLISTID ,\n" +
-            "e.GROUPLISTID ,\n" +
-            "e.TRIGGERLISTID \n" +
-            "from EVIDENCE e\n" +
-            "left outer join TARGETUSER t on e.USERID = t.USERID \n" +
-            "left outer join EVENTTYPE e2 on e.ACTIVITY = e2.EVENTCODE \n" +
-            "left outer join AGENTDIM a on e.AGENTID = a.AGENTID \n" +
-            "left outer join CATEGORYLIST c on e.CATEGORYLISTID = c.CATEGORYLISTID\n" +
-            "left outer join TRIGGERLIST t2 on e.TRIGGERLISTID = t2.TRIGGERLISTID \n" +
-            "left outer join GROUPLIST g on e.GROUPLISTID = g.GROUPLISTID \n";
+    private final String query = "select /*+ LEADING(E, E2) USE_NL(T, E2, C, T2, G) INDEX_DESC(E(CHANNEL, dateid)) */  --> @@@힌트추가\n" +
+            "                       rownum,\n" +
+            "                       e.CHANNEL,\n" +
+            "                       e.EVIDENCETYPE,\n" +
+            "                       e2.LABEL as Activity,\n" +
+            "                       e.EVIDENCESTARTTIME,\n" +
+            "                       e.EVIDENCEID,\n" +
+            "                       e.MATCHTEXT,\n" +
+            "                       e.APPLICATIONNAME,\n" +
+            "                       e.RESOURCES ,\n" +
+            "                       e.AGENTTIME ,\n" +
+            "                       t.LABEL AS USERNAME,\n" +
+            "                       t.SAMACCOUNTNAME AS PERSON,\n" +
+            "                       a.LABEL AS AGENTLABEL,\n" +
+            "                       e.CATEGORYLISTID ,\n" +
+            "                       e.GROUPLISTID ,\n" +
+            "                       e.TRIGGERLISTID\n" +
+            "                  from EVIDENCE e \n" +
+            "                  left outer join TARGETUSER t \n" +
+            "                    on e.USERID = t.USERID \n" +
+            "                  left outer join EVENTTYPE e2 \n" +
+            "                    on e.ACTIVITY = e2.EVENTCODE \n" +
+            "                  left outer join AGENTDIM a \n" +
+            "                    on e.AGENTID = a.AGENTID \n" +
+            "                  left outer join CATEGORYLIST c \n" +
+            "                    on e.CATEGORYLISTID = c.CATEGORYLISTID \n" +
+            "                  left outer join TRIGGERLIST t2 \n" +
+            "                    on e.TRIGGERLISTID = t2.TRIGGERLISTID \n" +
+            "                  left outer join GROUPLIST g \n" +
+            "                    on e.GROUPLISTID = g.GROUPLISTID\n";
+//            +
+//            "                 where e.CHANNEL=9\n" +
+//            "                   AND e.dateid between TO_TIMESTAMP('11-10-2021 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') \n" +
+//            "                                    and TO_TIMESTAMP('18-10-2021 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')\n" +
+//            "                   AND 1=1\n" +
+//            "                 ORDER BY e.CHANNEL DESC,          --> @@@인덱스에 맞춰 ORDER BY 절 컬럼 추가\n" +
+//            "                       e.dateid DESC,              --> @@@인덱스에 맞춰 ORDER BY 절 컬럼 추가\n" +
+//            "                       e.EVIDENCESTARTTIME DESC ";
 
     @Autowired
     private DataSource dataSource;
@@ -92,7 +111,7 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
         sql.append(this.query);
         sql.append(String.format(" where e.CHANNEL=%d ",channel));
         sql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
-        sql.append(String.format(" AND %s ORDER BY e.EVIDENCESTARTTIME DESC ", whereCondition));
+        sql.append(String.format(" AND %s ORDER BY e.CHANNEL DESC, e.dateid DESC, e.EVIDENCESTARTTIME DESC ", whereCondition));
 //        sql.append(String.format(" AND rownum > %d", pageable.getPageSize() * pageable.getPageNumber()));
         sql.append(orderString);
 
@@ -109,8 +128,8 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
 //                    }
 //                }
 //            }
-            log.info(String.format("select * from (%s) q where rownum <= %d", sql.toString(), pageable.getPageSize() * (pageable.getPageNumber()+1)));
-            try(PreparedStatement pstmt = conn.prepareStatement(String.format("select a.* from (select rownum AS rnum, q.* from (%s) q) a where rnum <= %d and rnum > %d", sql.toString(), pageable.getPageSize() * (pageable.getPageNumber()+1), pageable.getPageSize() * pageable.getPageNumber()))) {
+            log.info(String.format("select a.* from (select rownum AS rnum, q.* from (%s) q where rownum <= %d) a where rnum > %d", sql.toString(), pageable.getPageSize() * (pageable.getPageNumber()+1), pageable.getPageSize() * pageable.getPageNumber()));
+            try(PreparedStatement pstmt = conn.prepareStatement(String.format("select a.* from (select rownum AS rnum, q.* from (%s) q where rownum <= %d) a where rnum > %d", sql.toString(), pageable.getPageSize() * (pageable.getPageNumber()+1), pageable.getPageSize() * pageable.getPageNumber()))) {
                 try(ResultSet rs = pstmt.executeQuery()) {
                     while(rs.next()) {
                         EvidenceResponseDTO item = new EvidenceResponseDTO();
