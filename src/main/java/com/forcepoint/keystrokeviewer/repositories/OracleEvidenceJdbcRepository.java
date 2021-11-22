@@ -233,7 +233,7 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
         sql.append(this.query);
         sql.append(String.format(" where e.CHANNEL=%d AND ",channel));
         sql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
-        sql.append(String.format(" AND %s ORDER BY e.EVIDENCESTARTTIME DESC ", whereCondition));
+        sql.append(String.format(" AND %s ORDER BY e.CHANNEL DESC, e.dateid DESC, e.EVIDENCESTARTTIME DESC ", whereCondition));
         sql.append(orderString);
 
         Set<Long> categoryListId = new HashSet<>();
