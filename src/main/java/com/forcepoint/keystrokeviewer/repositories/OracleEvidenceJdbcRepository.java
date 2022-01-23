@@ -323,6 +323,10 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
 
             return content;
         } catch (SQLException throwables) {
+            log.error("SQLException", throwables);
+            throwables.printStackTrace();
+        } catch (Exception throwables) {
+            log.error("Exception", throwables);
             throwables.printStackTrace();
         }
         return null;
@@ -350,21 +354,27 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
             for(String id: ids) {
                 categoryListRepository.findByIdListContaining(id).forEach(i->categoryListIds.add(i.getCategoryListId()));
             }
-            cons.add(String.format("e.CATEGORYLISTID in (%s)", String.join(",", categoryListIds.stream().map(i->i.toString()).collect(Collectors.toSet()))));
+            if(categoryListIds.size() > 0) {
+                cons.add(String.format("e.CATEGORYLISTID in (%s)", String.join(",", categoryListIds.stream().map(i -> i.toString()).collect(Collectors.toSet()))));
+            }
         }
         if(!StringUtils.isEmptyOrWhitespace(condition.getGroup())) {
             Set<String> ids = groupRepository.findByLabelContaining(condition.getGroup()).stream().map(i->i.getId().getGroupId().toString()).collect(Collectors.toSet());
             for(String id: ids) {
                 groupListRepository.findByIdListContaining(id).forEach(i->groupListIds.add(i.getGroupListId()));
             }
-            cons.add(String.format("e.GROUPLISTID in (%s)", String.join(",", groupListIds.stream().map(i->i.toString()).collect(Collectors.toSet()))));
+            if(groupListIds.size() > 0) {
+                cons.add(String.format("e.GROUPLISTID in (%s)", String.join(",", groupListIds.stream().map(i -> i.toString()).collect(Collectors.toSet()))));
+            }
         }
         if(!StringUtils.isEmptyOrWhitespace(condition.getPolicy())) {
-            Set<String> ids = policyTriggerRepository.findByLabelContaining(condition.getGroup()).stream().map(i->i.getId().getTriggerId().toString()).collect(Collectors.toSet());
-            for(String id: ids) {
-                triggerListRepository.findByIdListContaining(id).forEach(i->policyListIds.add(i.getTriggerListId()));
+            Set<String> ids = policyTriggerRepository.findByLabelContaining(condition.getGroup()).stream().map(i -> i.getId().getTriggerId().toString()).collect(Collectors.toSet());
+            for (String id : ids) {
+                triggerListRepository.findByIdListContaining(id).forEach(i -> policyListIds.add(i.getTriggerListId()));
             }
-            cons.add(String.format("e.TRIGGERLISTID in (%s)", String.join(",", policyListIds.stream().map(i->i.toString()).collect(Collectors.toSet()))));
+            if (policyListIds.size() > 0) {
+                cons.add(String.format("e.TRIGGERLISTID in (%s)", String.join(",", policyListIds.stream().map(i -> i.toString()).collect(Collectors.toSet()))));
+            }
         }
 
         if(!StringUtils.isEmptyOrWhitespace(condition.getInfo())) {
