@@ -15,7 +15,7 @@ spring:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
       ddl-auto: none
   datasource:
-    url: jdbc:oracle:thin:@192.168.1.144:1521:cdb
+    url: jdbc:oracle:thin:@192.168.1.176:1521:cdb
     hikari:
       password: c601!
       username: c60_dbowner

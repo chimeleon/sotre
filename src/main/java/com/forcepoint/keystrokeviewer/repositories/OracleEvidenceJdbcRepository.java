@@ -104,13 +104,13 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
         StringBuffer countSql = new StringBuffer();
         countSql.append(this.countQuery);
         countSql.append(String.format(" where e.CHANNEL=%d AND e.EVIDENCETYPE = 1 ",channel));
-        countSql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
+        countSql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
         countSql.append(String.format(" AND %s", whereCondition));
 
         StringBuffer sql = new StringBuffer();
         sql.append(this.query);
         sql.append(String.format(" where e.CHANNEL=%d ",channel));
-        sql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
+        sql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
         sql.append(String.format(" AND %s ORDER BY e.CHANNEL DESC, e.dateid DESC, e.EVIDENCESTARTTIME DESC ", whereCondition));
 //        sql.append(String.format(" AND rownum > %d", pageable.getPageSize() * pageable.getPageNumber()));
         sql.append(orderString);
@@ -211,7 +211,7 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
 
     private String localeConverter(String originDate) {
         LocalDate date = LocalDate.parse(originDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        return date.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH)).toUpperCase();
+        return date.format(DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.ENGLISH)).toUpperCase();
     }
     @Override
     public List<EvidenceResponseDTO> findEvidenceByConditionForExcel(Pageable pageable, Integer channel, EvidenceRequestDTO condition) {
@@ -226,13 +226,13 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
         StringBuffer countSql = new StringBuffer();
         countSql.append(this.countQuery);
         countSql.append(String.format(" where e.CHANNEL=%d AND e.EVIDENCETYPE = 1 ",channel));
-        countSql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
+        countSql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
         countSql.append(String.format(" AND %s", whereCondition));
 
         StringBuffer sql = new StringBuffer();
         sql.append(this.query);
-        sql.append(String.format(" where e.CHANNEL=%d AND ",channel));
-        sql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
+        sql.append(String.format(" where e.CHANNEL=%d ",channel));
+        sql.append(String.format(" AND e.dateid between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')", localeConverter(condition.getRangeFrom()), localeConverter(condition.getRangeTo())));
         sql.append(String.format(" AND %s ORDER BY e.CHANNEL DESC, e.dateid DESC, e.EVIDENCESTARTTIME DESC ", whereCondition));
         sql.append(orderString);
 
@@ -398,11 +398,11 @@ public class OracleEvidenceJdbcRepository implements EvidenceJdbcRepository{
 
         if(!StringUtils.isEmptyOrWhitespace(condition.getStartAgentTime()) &&
            !StringUtils.isEmptyOrWhitespace(condition.getEndAgentTime()) ) {
-            cons.add(String.format("e.AGENTTIME between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getStartAgentTime()), localeConverter(condition.getEndAgentTime())));
+            cons.add(String.format("e.AGENTTIME between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')", localeConverter(condition.getStartAgentTime()), localeConverter(condition.getEndAgentTime())));
         }
         if(!StringUtils.isEmptyOrWhitespace(condition.getStartTime()) &&
                 !StringUtils.isEmptyOrWhitespace(condition.getEndTime()) ) {
-            cons.add(String.format("e.EVIDENCESTARTTIME between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MON-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MON-YYYY HH24:MI:SS.FF')", localeConverter(condition.getStartTime()), localeConverter(condition.getEndTime())));
+            cons.add(String.format("e.EVIDENCESTARTTIME between TO_TIMESTAMP('%s 00:00:00.000000000', 'DD-MM-YYYY HH24:MI:SS.FF') and TO_TIMESTAMP('%s 23:59:59.999999000', 'DD-MM-YYYY HH24:MI:SS.FF')", localeConverter(condition.getStartTime()), localeConverter(condition.getEndTime())));
         }
         return String.join(" AND ", cons);
     }

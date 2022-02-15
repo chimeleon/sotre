@@ -38,7 +38,12 @@ public class EvidenceService {
 //    private OracleEvidenceJdbcRepository evidenceJdbcRepository;
 
     public Page<EvidenceResponseDTO> jdbcData(int channel, Pageable pageRequest, EvidenceRequestDTO condition) {
-        return evidenceJdbcRepository.findEvidenceByCondition(pageRequest, channel, condition);
+        Page<EvidenceResponseDTO> ret = evidenceJdbcRepository.findEvidenceByCondition(pageRequest, channel, condition);
+        ret.getContent().forEach(i->{
+            ZonedDateTime time = i.getEvidenceStartTime();
+            i.setEvidenceStartTime(ZonedDateTime.ofInstant(Instant.ofEpochSecond(time.toEpochSecond()), ZoneId.of("UTC")));
+        });
+        return ret;
     }
 
     public String jdbcDataForExcel(int channel, Pageable pageRequest, EvidenceRequestDTO condition) {

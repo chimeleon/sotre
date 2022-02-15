@@ -17,7 +17,7 @@ public class EvidenceResponseDTO {
     private Long groupListId;
     private Long triggerListid;
     private Long categoryListId;
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     private ZonedDateTime evidenceStartTime;
     private String matchText;
     private String applicationName;
